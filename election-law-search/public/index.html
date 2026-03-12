@@ -390,6 +390,7 @@
       margin: 6px 0;
     }
     @keyframes shimmer { to { background-position: -200% 0; } }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 
     /* ── Sidebar loading ── */
     .sidebar-loading { padding: 16px; }
@@ -435,7 +436,7 @@
       <h1>공직선거법 AI 법령 검색 시스템</h1>
       <div class="subtitle">Election Law Intelligence · 3-Agent Architecture</div>
     </div>
-    <span class="badge">Claude Opus 4.6 · 3 Agents</span>
+    <span class="badge" id="modelBadge">Claude Haiku 4.5 · Batch API + 캐싱</span>
   </header>
 
   <!-- Content -->
@@ -446,9 +447,15 @@
       <div class="sidebar-header">
         <h2>📚 법령 네비게이터</h2>
         <p>항목을 클릭하면 검색란에 자동 입력됩니다</p>
+        <div id="batchStatusBar" style="margin-top:8px;display:none">
+          <div style="font-size:10px;color:#6c757d;margin-bottom:4px" id="batchStatusText">Batch API 초기화 중...</div>
+          <div style="background:#e2e6ea;border-radius:4px;height:4px;overflow:hidden">
+            <div id="batchProgressBar" style="background:#f59e0b;height:100%;width:30%;border-radius:4px;transition:width .5s;animation:pulse 1.5s infinite"></div>
+          </div>
+        </div>
       </div>
       <div class="sidebar-body" id="sidebarBody">
-        <div class="agent1-badge">🤖 Agent 1 · 법령 수집</div>
+        <div class="agent1-badge" id="agent1Badge">⚡ Agent 1 · Batch API 수집 중...</div>
         <div class="sidebar-loading" id="sidebarLoading">
           <div class="skeleton" style="width:60%;height:13px;"></div>
           <div style="height:8px"></div>
@@ -504,8 +511,8 @@
             ↑
           </button>
         </div>
-        <div class="input-hint">
-          Agent 2가 관련 법조문을, Agent 3가 판례·사례를 검색합니다
+        <div class="input-hint" id="inputHint">
+          Agent 2 (법조문·프롬프트캐싱) + Agent 3 (판례·웹검색·프롬프트캐싱) | 모델: Claude Haiku 4.5
         </div>
       </div>
     </main>
@@ -864,7 +871,44 @@ function showToast(msg) {
   setTimeout(() => t.remove(), 3000);
 }
 
+// ── Batch 상태 폴링 ──
+let batchPollTimer = null;
+
+async function pollBatchStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const json = await res.json();
+    const bar = document.getElementById('batchStatusBar');
+    const txt = document.getElementById('batchStatusText');
+    const prog = document.getElementById('batchProgressBar');
+    const badge = document.getElementById('agent1Badge');
+
+    if (json.status === 'loading' || json.status === 'initializing') {
+      if (bar) bar.style.display = 'block';
+      const rc = json.requestCounts;
+      if (rc && txt) {
+        const done = (rc.succeeded || 0) + (rc.errored || 0);
+        const total = done + (rc.processing || 0);
+        const pct = total > 0 ? Math.round((done / total) * 100) : 20;
+        txt.textContent = `Batch API 처리 중... (${done}/${total} 완료)`;
+        if (prog) { prog.style.width = pct + '%'; prog.style.animation = 'none'; }
+      }
+      batchPollTimer = setTimeout(pollBatchStatus, 3000);
+    } else if (json.status === 'ready') {
+      if (bar) bar.style.display = 'none';
+      if (prog) { prog.style.width = '100%'; prog.style.background = '#22c55e'; prog.style.animation = 'none'; }
+      if (badge) { badge.textContent = '✅ Agent 1 · Batch 완료 (법령 캐시 준비됨)'; badge.style.background = '#e8f5e9'; badge.style.borderColor = '#86efac'; badge.style.color = '#166534'; }
+      document.getElementById('inputHint').textContent =
+        `✅ 법령 사전 로딩 완료 (${Math.round(json.contentLength/1000)}KB 캐시) | Prompt Caching 활성화 | Claude Haiku 4.5`;
+    } else if (json.status === 'error') {
+      if (bar) bar.style.display = 'none';
+      if (badge) { badge.textContent = '⚠️ Agent 1 · Batch 실패 (내부 지식으로 대체)'; badge.style.background = '#fff3cd'; badge.style.color = '#856404'; }
+    }
+  } catch {}
+}
+
 // ── Init ──
+pollBatchStatus();
 loadLawStructure();
 </script>
 </body>
