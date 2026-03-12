@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>공직선거법 AI 법령 검색 시스템</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #003087;
+      --primary-light: #1a4fa8;
+      --primary-dark: #001f5c;
+      --accent: #c0392b;
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --surface2: #f8f9fb;
+      --border: #e2e6ea;
+      --text: #1a1a2e;
+      --text-muted: #6c757d;
+      --agent2-bg: #eef4ff;
+      --agent2-border: #3b82f6;
+      --agent2-header: #1e40af;
+      --agent3-bg: #f0fdf4;
+      --agent3-border: #22c55e;
+      --agent3-header: #166534;
+      --sidebar-w: 300px;
+      --header-h: 60px;
+      --input-h: 120px;
+      --radius: 12px;
+      --shadow: 0 2px 8px rgba(0,0,0,.08);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,.12);
+    }
+
+    html, body { height: 100%; font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Layout ── */
+    .app { display: grid; grid-template-rows: var(--header-h) 1fr; height: 100vh; overflow: hidden; }
+
+    /* ── Header ── */
+    header {
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 24px;
+      box-shadow: 0 2px 8px rgba(0,0,48,.3);
+      z-index: 100;
+    }
+    header .logo { font-size: 22px; }
+    header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+    header .subtitle { font-size: 12px; opacity: .75; margin-top: 2px; font-weight: 400; }
+    header .badge {
+      margin-left: auto;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      color: #fff;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    /* ── Content area ── */
+    .content { display: flex; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .sidebar-header h2 { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+    .sidebar-header p { font-size: 11px; color: var(--text-muted); }
+    .sidebar-body { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+    .agent1-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      background: #fff3e0;
+      color: #e65100;
+      border: 1px solid #ffcc80;
+      border-radius: 20px;
+      padding: 2px 8px;
+      margin: 12px 16px 4px;
+      font-weight: 600;
+    }
+
+    /* Law tree */
+    .law-group { margin-bottom: 4px; }
+    .law-group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    .law-group-header:hover { background: #eef4ff; border-left-color: var(--primary); }
+    .law-group-header .icon { font-size: 14px; }
+    .law-group-header .arrow { margin-left: auto; transition: transform .2s; }
+    .law-group-header.open .arrow { transform: rotate(90deg); }
+    .law-group-header.active { background: #eef4ff; border-left-color: var(--primary); }
+
+    .law-chapters { display: none; }
+    .law-chapters.visible { display: block; }
+
+    .chapter-item {
+      padding: 6px 16px 6px 32px;
+      cursor: pointer;
+      font-size: 11.5px;
+      color: var(--text);
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    .chapter-item:hover { background: #f0f7ff; border-left-color: #93c5fd; }
+    .chapter-item .chapter-num { font-weight: 600; color: var(--primary); }
+    .chapter-item .chapter-range { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+    .article-list { display: none; }
+    .article-list.visible { display: block; }
+    .article-item {
+      padding: 4px 16px 4px 48px;
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .article-item:hover { background: #f8faff; color: var(--primary); }
+    .article-item .art-no { font-weight: 600; }
+
+    .related-laws { padding: 12px 16px; border-top: 1px solid var(--border); }
+    .related-laws h3 { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+    .related-law-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11.5px;
+      transition: background .15s;
+      margin-bottom: 2px;
+    }
+    .related-law-item:hover { background: var(--surface2); }
+    .related-law-item .law-name { font-weight: 600; color: var(--primary); }
+    .related-law-item .law-desc { font-size: 10.5px; color: var(--text-muted); }
+
+    /* ── Main area ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Conversation ── */
+    .conversation {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Welcome ── */
+    .welcome {
+      text-align: center;
+      padding: 60px 32px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .welcome .emoji { font-size: 56px; margin-bottom: 16px; }
+    .welcome h2 { font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 12px; font-family: 'Noto Serif KR', serif; }
+    .welcome p { font-size: 14px; color: var(--text-muted); line-height: 1.8; }
+    .quick-questions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 28px; }
+    .quick-q {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--primary);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    .quick-q:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* ── Q&A Block ── */
+    .qa-block { display: flex; flex-direction: column; gap: 16px; }
+
+    .question-bubble {
+      align-self: flex-end;
+      max-width: 70%;
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 18px 18px 4px 18px;
+      font-size: 14px;
+      line-height: 1.7;
+      box-shadow: var(--shadow);
+    }
+
+    .agents-panel { display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Agent Card ── */
+    .agent-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: box-shadow .2s;
+    }
+    .agent-card:hover { box-shadow: var(--shadow-lg); }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .agent-header.agent2 { background: var(--agent2-bg); border-bottom-color: #bfdbfe; }
+    .agent-header.agent3 { background: var(--agent3-bg); border-bottom-color: #bbf7d0; }
+
+    .agent-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .agent-badge.a2 { background: var(--agent2-border); color: #fff; }
+    .agent-badge.a3 { background: var(--agent3-border); color: #fff; }
+
+    .agent-title { font-size: 13px; font-weight: 700; }
+    .agent-title.a2 { color: var(--agent2-header); }
+    .agent-title.a3 { color: var(--agent3-header); }
+
+    .agent-status {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid #e2e6ea;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .spinner.a2 { border-top-color: var(--agent2-border); }
+    .spinner.a3 { border-top-color: var(--agent3-border); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .agent-body { padding: 20px; }
+
+    /* Markdown output */
+    .md-output { font-size: 14px; line-height: 1.8; color: var(--text); }
+    .md-output h2 { font-size: 16px; font-weight: 700; color: var(--primary); margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+    .md-output h3 { font-size: 14px; font-weight: 700; color: var(--text); margin: 16px 0 8px; }
+    .md-output h4 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; }
+    .md-output p { margin: 8px 0; }
+    .md-output blockquote {
+      background: var(--surface2);
+      border-left: 4px solid var(--primary);
+      padding: 10px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+      font-style: normal;
+    }
+    .md-output blockquote strong { color: var(--primary); }
+    .md-output ul, .md-output ol { padding-left: 20px; margin: 8px 0; }
+    .md-output li { margin: 4px 0; }
+    .md-output strong { font-weight: 700; color: var(--primary-dark); }
+    .md-output em { font-style: italic; color: var(--accent); }
+    .md-output code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12.5px; font-family: monospace; }
+    .md-output pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
+    .md-output hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .md-output a { color: var(--primary); text-decoration: underline; }
+
+    .cursor { display: inline-block; width: 2px; height: 16px; background: var(--primary); border-radius: 1px; animation: blink 1s step-end infinite; vertical-align: text-bottom; margin-left: 2px; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* Error card */
+    .error-card {
+      background: #fff5f5;
+      border: 1px solid #feb2b2;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      color: #c53030;
+      font-size: 14px;
+    }
+
+    /* ── Input area ── */
+    .input-area {
+      padding: 16px 24px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 8px rgba(0,0,0,.05);
+    }
+    .input-box {
+      display: flex;
+      gap: 12px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .input-wrapper {
+      flex: 1;
+      position: relative;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .input-wrapper:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,48,135,.1);
+    }
+    textarea {
+      width: 100%;
+      min-height: 56px;
+      max-height: 180px;
+      padding: 14px 16px;
+      border: none;
+      background: transparent;
+      resize: none;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      line-height: 1.6;
+    }
+    textarea::placeholder { color: #adb5bd; }
+
+    .submit-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      align-self: flex-end;
+      transition: background .15s, transform .1s;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,48,135,.3);
+    }
+    .submit-btn:hover { background: var(--primary-light); }
+    .submit-btn:active { transform: scale(.95); }
+    .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+
+    .input-hint { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 8px; }
+
+    /* ── Loading skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f2f5 25%, #e2e6ea 50%, #f0f2f5 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+      height: 14px;
+      margin: 6px 0;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── Sidebar loading ── */
+    .sidebar-loading { padding: 16px; }
+    .sidebar-loading .skeleton { height: 12px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      z-index: 9999;
+      box-shadow: var(--shadow-lg);
+      animation: fadeUp .3s ease;
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .conversation { padding: 16px; }
+      .input-area { padding: 12px 16px 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <span class="logo">🗳️</span>
+    <div>
+      <h1>공직선거법 AI 법령 검색 시스템</h1>
+      <div class="subtitle">Election Law Intelligence · 3-Agent Architecture</div>
+    </div>
+    <span class="badge">Claude Opus 4.6 · 3 Agents</span>
+  </header>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Sidebar (Agent 1) -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>📚 법령 네비게이터</h2>
+        <p>항목을 클릭하면 검색란에 자동 입력됩니다</p>
+      </div>
+      <div class="sidebar-body" id="sidebarBody">
+        <div class="agent1-badge">🤖 Agent 1 · 법령 수집</div>
+        <div class="sidebar-loading" id="sidebarLoading">
+          <div class="skeleton" style="width:60%;height:13px;"></div>
+          <div style="height:8px"></div>
+          <div class="skeleton" style="width:80%;height:11px;"></div>
+          <div class="skeleton" style="width:70%;height:11px;"></div>
+          <div class="skeleton" style="width:75%;height:11px;"></div>
+          <div style="height:12px"></div>
+          <div class="skeleton" style="width:65%;height:13px;"></div>
+          <div style="height:8px"></div>
+          <div class="skeleton" style="width:80%;height:11px;"></div>
+          <div class="skeleton" style="width:70%;height:11px;"></div>
+        </div>
+        <div id="lawTree"></div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="conversation" id="conversation">
+
+        <!-- Welcome screen -->
+        <div class="welcome" id="welcome">
+          <div class="emoji">⚖️</div>
+          <h2>공직선거법 무엇이 궁금하신가요?</h2>
+          <p>
+            공직선거법, 시행령, 시행규칙의 법조문을 검색하고<br />
+            관련 판례와 선거관리위원회 유권해석을 확인하세요.<br />
+            AI가 3개의 전문 에이전트로 정확한 답변을 드립니다.
+          </p>
+          <div class="quick-questions">
+            <button class="quick-q" onclick="setQuestion(this.textContent)">선거운동 가능한 방법은?</button>
+            <button class="quick-q" onclick="setQuestion(this.textContent)">후보자 기탁금 제도란?</button>
+            <button class="quick-q" onclick="setQuestion(this.textContent)">선거비용 제한액 규정</button>
+            <button class="quick-q" onclick="setQuestion(this.textContent)">선거일 투표 시간은?</button>
+            <button class="quick-q" onclick="setQuestion(this.textContent)">당선무효 사유는 무엇인가요?</button>
+            <button class="quick-q" onclick="setQuestion(this.textContent)">선거 여론조사 공표 제한</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Input -->
+      <div class="input-area">
+        <div class="input-box">
+          <div class="input-wrapper">
+            <textarea
+              id="questionInput"
+              placeholder="공직선거법에 대해 궁금한 내용을 입력하세요... (Shift+Enter로 줄바꿈, Enter로 전송)"
+              rows="2"
+            ></textarea>
+          </div>
+          <button class="submit-btn" id="submitBtn" onclick="submitQuestion()" title="검색 (Enter)">
+            ↑
+          </button>
+        </div>
+        <div class="input-hint">
+          Agent 2가 관련 법조문을, Agent 3가 판례·사례를 검색합니다
+        </div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+// ── marked.js config ──
+if (typeof marked !== 'undefined') {
+  marked.setOptions({ breaks: true, gfm: true });
+}
+
+// ── State ──
+let isSearching = false;
+
+// ── Input auto-resize ──
+const textarea = document.getElementById('questionInput');
+textarea.addEventListener('input', () => {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 180) + 'px';
+});
+textarea.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    submitQuestion();
+  }
+});
+
+function setQuestion(text) {
+  textarea.value = text;
+  textarea.focus();
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 180) + 'px';
+}
+
+// ── Submit ──
+async function submitQuestion() {
+  const question = textarea.value.trim();
+  if (!question || isSearching) return;
+
+  isSearching = true;
+  document.getElementById('submitBtn').disabled = true;
+
+  // Hide welcome
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.style.display = 'none';
+
+  // Create QA block
+  const qaId = 'qa_' + Date.now();
+  const conv = document.getElementById('conversation');
+
+  const qaBlock = document.createElement('div');
+  qaBlock.className = 'qa-block';
+  qaBlock.id = qaId;
+
+  // Question bubble
+  qaBlock.innerHTML = `
+    <div class="question-bubble">${escapeHtml(question)}</div>
+    <div class="agents-panel" id="panel_${qaId}">
+      ${agentCardHtml(2, qaId)}
+      ${agentCardHtml(3, qaId)}
+    </div>
+  `;
+  conv.appendChild(qaBlock);
+  textarea.value = '';
+  textarea.style.height = 'auto';
+  scrollToBottom();
+
+  // ── SSE ──
+  let agent2Buf = '';
+  let agent3Buf = '';
+
+  try {
+    const res = await fetch('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showError(qaId, err.error || '서버 오류가 발생했습니다.');
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+
+      const lines = buf.split('\n');
+      buf = lines.pop(); // keep incomplete line
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const msg = JSON.parse(line.slice(6));
+          handleSSE(msg, qaId, {
+            get agent2() { return agent2Buf; },
+            set agent2(v) { agent2Buf = v; },
+            get agent3() { return agent3Buf; },
+            set agent3(v) { agent3Buf = v; },
+          });
+        } catch {}
+      }
+    }
+
+    // Final render
+    renderMarkdown(2, qaId, agent2Buf, false);
+    renderMarkdown(3, qaId, agent3Buf, false);
+
+  } catch (err) {
+    showError(qaId, err.message || '네트워크 오류가 발생했습니다.');
+  } finally {
+    isSearching = false;
+    document.getElementById('submitBtn').disabled = false;
+    scrollToBottom();
+  }
+}
+
+// ── SSE Handler ──
+const buffers = {};
+
+function handleSSE(msg, qaId, store) {
+  switch (msg.type) {
+    case 'agent_status': {
+      const { agent, status, message } = msg;
+      const statusEl = document.getElementById(`status_${agent}_${qaId}`);
+      const spinnerEl = document.getElementById(`spinner_${agent}_${qaId}`);
+      if (status === 'working') {
+        if (statusEl) statusEl.textContent = message || '처리 중...';
+        if (spinnerEl) spinnerEl.style.display = 'block';
+      } else if (status === 'done') {
+        if (statusEl) statusEl.textContent = '완료';
+        if (spinnerEl) spinnerEl.style.display = 'none';
+      }
+      break;
+    }
+    case 'text': {
+      const { agent, chunk } = msg;
+      if (agent === 2) {
+        store.agent2 += chunk;
+        renderMarkdown(2, qaId, store.agent2, true);
+      } else if (agent === 3) {
+        store.agent3 += chunk;
+        renderMarkdown(3, qaId, store.agent3, true);
+      }
+      scrollToBottomSmooth();
+      break;
+    }
+    case 'error': {
+      showError(qaId, msg.message);
+      break;
+    }
+  }
+}
+
+// ── Render markdown ──
+function renderMarkdown(agent, qaId, text, streaming) {
+  const el = document.getElementById(`body_${agent}_${qaId}`);
+  if (!el) return;
+  const html = typeof marked !== 'undefined' ? marked.parse(text) : escapeHtml(text).replace(/\n/g, '<br>');
+  el.innerHTML = `<div class="md-output">${html}</div>${streaming ? '<span class="cursor"></span>' : ''}`;
+}
+
+// ── Agent Card HTML ──
+function agentCardHtml(agent, qaId) {
+  const isA2 = agent === 2;
+  const color = isA2 ? 'a2' : 'a3';
+  const headerClass = isA2 ? 'agent2' : 'agent3';
+  const icon = isA2 ? '📋' : '⚖️';
+  const title = isA2 ? '법조문 검색 에이전트' : '판례·사례 검색 에이전트';
+  const badgeLabel = `Agent ${agent}`;
+
+  return `
+    <div class="agent-card">
+      <div class="agent-header ${headerClass}">
+        <span class="agent-badge ${color}">${icon} ${badgeLabel}</span>
+        <span class="agent-title ${color}">${title}</span>
+        <div class="agent-status">
+          <div class="spinner ${color}" id="spinner_${agent}_${qaId}" style="display:none"></div>
+          <span id="status_${agent}_${qaId}">대기 중</span>
+        </div>
+      </div>
+      <div class="agent-body">
+        <div id="body_${agent}_${qaId}">
+          <div class="skeleton" style="width:80%"></div>
+          <div class="skeleton" style="width:65%"></div>
+          <div class="skeleton" style="width:72%"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Show error ──
+function showError(qaId, message) {
+  const panel = document.getElementById(`panel_${qaId}`);
+  if (panel) {
+    panel.insertAdjacentHTML('beforeend', `
+      <div class="error-card">⚠️ 오류: ${escapeHtml(message)}</div>
+    `);
+  }
+}
+
+// ── Scroll ──
+function scrollToBottom() {
+  const conv = document.getElementById('conversation');
+  conv.scrollTop = conv.scrollHeight;
+}
+let scrollThrottle = null;
+function scrollToBottomSmooth() {
+  if (scrollThrottle) return;
+  scrollThrottle = requestAnimationFrame(() => {
+    scrollToBottom();
+    scrollThrottle = null;
+  });
+}
+
+// ── Escape HTML ──
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Load sidebar (Agent 1) ──
+async function loadLawStructure() {
+  try {
+    const res = await fetch('/api/law-structure');
+    const json = await res.json();
+    document.getElementById('sidebarLoading').style.display = 'none';
+
+    if (!json.ok || !json.data) {
+      document.getElementById('lawTree').innerHTML = '<div style="padding:16px;font-size:12px;color:#6c757d;">법령 구조를 불러오는 중 오류가 발생했습니다.</div>';
+      return;
+    }
+
+    const data = json.data;
+    const tree = document.getElementById('lawTree');
+
+    // If raw text (parsing failed)
+    if (data.raw) {
+      tree.innerHTML = `<div style="padding:16px;font-size:12px;line-height:1.6;color:#4a5568;">${escapeHtml(data.raw)}</div>`;
+      return;
+    }
+
+    let html = '';
+
+    // Main laws
+    if (data.laws) {
+      for (const law of data.laws) {
+        const lid = 'law_' + law.id;
+        html += `
+          <div class="law-group">
+            <div class="law-group-header" id="hdr_${lid}" onclick="toggleLaw('${lid}')">
+              <span class="icon">📜</span>
+              <span>${escapeHtml(law.name)}</span>
+              <span class="arrow">›</span>
+            </div>
+            <div class="law-chapters" id="chaps_${lid}">
+        `;
+
+        if (law.chapters && law.chapters.length > 0) {
+          for (const ch of law.chapters) {
+            const cid = lid + '_' + ch.number.replace(/\s+/g,'_');
+            html += `
+              <div class="chapter-item" id="ci_${cid}" onclick="toggleChapter('${cid}', '${escapeHtml(law.name)} ${escapeHtml(ch.number)} ${escapeHtml(ch.title)}')">
+                <div>
+                  <span class="chapter-num">${escapeHtml(ch.number)}</span>
+                  <span> ${escapeHtml(ch.title)}</span>
+                </div>
+                ${ch.range ? `<div class="chapter-range">${escapeHtml(ch.range)}</div>` : ''}
+              </div>
+              <div class="article-list" id="arts_${cid}">
+            `;
+            if (ch.keyArticles) {
+              for (const art of ch.keyArticles) {
+                const artQ = `${escapeHtml(law.name)} ${escapeHtml(art.no)} (${escapeHtml(art.title)})에 대해 설명해주세요`;
+                html += `
+                  <div class="article-item" onclick="setQuestion('${artQ.replace(/'/g,"\\'")}')">
+                    <span class="art-no">${escapeHtml(art.no)}</span> ${escapeHtml(art.title)}
+                  </div>
+                `;
+              }
+            }
+            html += `</div>`;
+          }
+        } else {
+          html += `<div class="chapter-item" onclick="setQuestion('${escapeHtml(law.name)} 주요 내용을 설명해주세요')">
+            <span style="color:#6c757d">주요 내용 검색...</span>
+          </div>`;
+        }
+
+        html += `</div></div>`;
+      }
+    }
+
+    // Related laws
+    if (data.relatedLaws && data.relatedLaws.length > 0) {
+      html += `<div class="related-laws"><h3>관련 법령</h3>`;
+      for (const rl of data.relatedLaws) {
+        html += `
+          <div class="related-law-item" onclick="setQuestion('${escapeHtml(rl.name)} 주요 내용을 설명해주세요')">
+            <div>
+              <div class="law-name">${escapeHtml(rl.name)}</div>
+              <div class="law-desc">${escapeHtml(rl.description || '')}</div>
+            </div>
+          </div>
+        `;
+      }
+      html += `</div>`;
+    }
+
+    tree.innerHTML = html;
+
+    // Auto-open first law
+    if (data.laws && data.laws.length > 0) {
+      toggleLaw('law_' + data.laws[0].id);
+    }
+
+  } catch (err) {
+    document.getElementById('sidebarLoading').innerHTML = '<div style="padding:16px;font-size:12px;color:#e53e3e;">법령 구조 로딩 실패: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+function toggleLaw(lid) {
+  const hdr = document.getElementById('hdr_' + lid);
+  const chaps = document.getElementById('chaps_' + lid);
+  if (!hdr || !chaps) return;
+  const isOpen = chaps.classList.contains('visible');
+  chaps.classList.toggle('visible', !isOpen);
+  hdr.classList.toggle('open', !isOpen);
+}
+
+function toggleChapter(cid, questionText) {
+  const arts = document.getElementById('arts_' + cid);
+  if (!arts) return;
+  if (!arts.children.length) {
+    // No articles → set question
+    setQuestion(questionText + '의 주요 내용을 설명해주세요');
+    return;
+  }
+  arts.classList.toggle('visible');
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── Init ──
+loadLawStructure();
+</script>
+</body>
+</html>
