@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>서대문구 갑 선거구 2026 지지도 지도</title>
+  <meta name="description" content="서대문구 갑 선거구 행정동별 정치 지지 성향 분석 및 2026 지방선거 예측 인터랙티브 지도" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- 스타일시트 -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- 툴팁 (전역) -->
+  <div id="map-tooltip" class="map-tooltip" aria-hidden="true"></div>
+
+  <!-- 헤더 -->
+  <header class="header">
+    <h1>서대문구 <span>갑</span> 선거구 지지도 지도</h1>
+    <p class="subtitle">제22대 기준 · 7개 행정동 · 2026 지방선거 예측 포함</p>
+    <div class="badges">
+      <span class="badge">총 인구 127,500명</span>
+      <span class="badge">유권자 110,800명</span>
+      <span class="badge party">현 의원: 김동아 (더불어민주당)</span>
+      <span class="badge">데이터 기준: 2024년 22대 총선</span>
+    </div>
+  </header>
+
+  <!-- 네비게이션 탭 -->
+  <nav class="nav-tabs" role="tablist">
+    <div class="nav-tab active" role="tab" data-tab="map">지지도 지도</div>
+    <div class="nav-tab" role="tab" data-tab="charts">선거 결과 차트</div>
+    <div class="nav-tab" role="tab" data-tab="stats">동별 통계</div>
+    <div class="nav-tab" role="tab" data-tab="prediction">2026 예측</div>
+  </nav>
+
+  <!-- 메인 컨테이너 -->
+  <main class="main-container">
+
+    <!-- ===== 탭 1: 지지도 지도 ===== -->
+    <section id="tab-map" class="tab-content active" role="tabpanel">
+      <div class="map-section">
+
+        <!-- SVG 지도 카드 -->
+        <div class="map-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">서대문구 갑 선거구 행정동별 지지 성향</div>
+              <div class="card-subtitle">동을 클릭하면 상세 정보를 확인할 수 있습니다</div>
+            </div>
+            <div class="map-mode-toggle">
+              <button class="mode-btn active" data-mode="current">현재</button>
+              <button class="mode-btn" data-mode="prediction">2026 예측</button>
+            </div>
+          </div>
+
+          <!-- SVG 지도 -->
+          <div class="svg-map-wrapper">
+            <svg id="electoral-map"
+                 viewBox="0 0 460 375"
+                 xmlns="http://www.w3.org/2000/svg"
+                 aria-label="서대문구 갑 선거구 행정동 지도">
+              <defs>
+                <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.4"/>
+                </filter>
+              </defs>
+              <!-- 폴리곤은 app.js에서 동적으로 생성됩니다 -->
+            </svg>
+          </div>
+
+          <!-- 범례 -->
+          <div class="map-legend">
+            <div class="legend-title">범례 (진보 지지율 기준)</div>
+            <div class="legend-items">
+              <div class="legend-item">
+                <div class="legend-dot" style="background: #1B4FD8;"></div>
+                <span>진보 강세 (60%+)</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background: #4472CA;"></div>
+                <span>진보 우세 (55~60%)</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background: #7BAFD4;"></div>
+                <span>경합 진보 (52~55%)</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background: #C9C9C9;"></div>
+                <span>경합 (50~52%)</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background: #D4857B;"></div>
+                <span>경합 보수 (48~50%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 사이드 패널 -->
+        <div class="info-panel">
+
+          <!-- 선거구 요약 -->
+          <div class="district-summary">
+            <div class="summary-title">선거구 현황</div>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <div class="stat-label">구성 행정동</div>
+                <div class="stat-value">7개 동</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">총 유권자</div>
+                <div class="stat-value">110,800명</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">22대 총선 결과</div>
+                <div class="stat-value progressive">민주 49.0%</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">현 국회의원</div>
+                <div class="stat-value" style="font-size: 0.9rem;">김동아 (민주)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 동 상세 패널 -->
+          <div id="dong-detail-panel"></div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 탭 2: 선거 결과 차트 ===== -->
+    <section id="tab-charts" class="tab-content" role="tabpanel">
+      <div class="charts-section">
+
+        <!-- 국회의원 선거 (wide) -->
+        <div class="chart-card wide">
+          <div class="card-header">
+            <div>
+              <div class="card-title">국회의원 선거 결과 (2012~2024)</div>
+              <div class="card-subtitle">서대문구 갑 선거구 역대 총선 정당별 득표율</div>
+            </div>
+          </div>
+          <div class="chart-wrapper tall">
+            <canvas id="assembly-chart"></canvas>
+          </div>
+          <div style="padding: 0 20px 20px; display: flex; flex-wrap: wrap; gap: 12px;">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; flex: 1; min-width: 160px;">
+              <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">22대 (2024)</div>
+              <div style="font-size: 0.88rem; color: #60a5fa; font-weight: 600;">민주 49.0% vs 국힘 45.25%</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">김동아 당선 (접전)</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; flex: 1; min-width: 160px;">
+              <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">21대 (2020)</div>
+              <div style="font-size: 0.88rem; color: #60a5fa; font-weight: 600;">민주 62.35% vs 미통 34.06%</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">민주 압승 (+28.29%p)</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; flex: 1; min-width: 160px;">
+              <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">19대 (2012)</div>
+              <div style="font-size: 0.88rem; color: #60a5fa; font-weight: 600;">민주 51.38% vs 새누리 45.56%</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">민주 우세 (+5.82%p)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 대선 -->
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">대통령 선거 결과</div>
+              <div class="card-subtitle">서대문구 기준 주요 후보 득표율</div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="presidential-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- 지방선거 -->
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">지방선거 결과 (서대문구청장)</div>
+              <div class="card-subtitle">2018년 · 2022년 지방선거 득표율</div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="local-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- 유권자 분포 -->
+        <div class="chart-card wide">
+          <div class="card-header">
+            <div>
+              <div class="card-title">행정동별 유권자 분포</div>
+              <div class="card-subtitle">서대문구 갑 선거구 동별 유권자 수 현황</div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="voter-chart"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== 탭 3: 동별 통계 ===== -->
+    <section id="tab-stats" class="tab-content" role="tabpanel">
+      <div class="stats-section">
+
+        <!-- 전체 요약 바 -->
+        <div style="background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); padding: 20px; box-shadow: var(--shadow);">
+          <div style="font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--text-primary);">서대문구 갑 전체 지지율 (22대 기준)</div>
+          <div class="trend-bar-labels">
+            <span style="color: #60a5fa;">더불어민주당 49.0%</span>
+            <span style="color: #f87171;">국민의힘 45.25%</span>
+          </div>
+          <div class="trend-bar-outer" style="height: 24px;">
+            <div class="trend-bar-prog" style="width: 49%; font-size: 0.8rem;">49.0%</div>
+            <div class="trend-bar-cons" style="width: 45.25%; font-size: 0.8rem;">45.25%</div>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 10px;">
+            기타 5.75% · 총 유권자 110,800명 · 접전 선거구 (격차 3.75%p)
+          </div>
+        </div>
+
+        <!-- 동별 카드 그리드 -->
+        <div id="dong-cards-container" class="dong-cards-grid"></div>
+
+      </div>
+    </section>
+
+    <!-- ===== 탭 4: 2026 예측 ===== -->
+    <section id="tab-prediction" class="tab-content" role="tabpanel">
+      <div class="prediction-section">
+
+        <!-- 전체 예측 -->
+        <div class="prediction-card">
+          <div class="pred-title">2026 지방선거 예측 (서대문구 갑)</div>
+
+          <div class="big-prediction">
+            <div class="big-pred-item prog-bg">
+              <div class="big-pred-party">더불어민주당</div>
+              <div class="big-pred-value prog" id="pred-progressive">-</div>
+              <div class="big-pred-label">예상 득표율</div>
+            </div>
+            <div class="big-pred-item cons-bg">
+              <div class="big-pred-party">국민의힘</div>
+              <div class="big-pred-value cons" id="pred-conservative">-</div>
+              <div class="big-pred-label">예상 득표율</div>
+            </div>
+          </div>
+
+          <div class="trend-bar-wrapper">
+            <div class="trend-bar-labels">
+              <span>민주당</span>
+              <span>국민의힘</span>
+            </div>
+            <div class="trend-bar-outer">
+              <div class="trend-bar-prog" id="pred-trend-prog" style="width: 0%">-</div>
+              <div class="trend-bar-cons" id="pred-trend-cons" style="width: 0%">-</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; background: rgba(68,114,202,0.08); border: 1px solid rgba(68,114,202,0.25); border-radius: 8px; padding: 12px;">
+            <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 4px;">예측 신뢰도</div>
+            <div style="font-size: 0.88rem; color: #93c5fd; font-weight: 600;">중간 | 진보 우세 예상</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+              2024년 접전 결과 및 정치 환경 변화 반영 · 2026.03 기준 분석
+            </div>
+          </div>
+        </div>
+
+        <!-- 핵심 변수 -->
+        <div class="prediction-card">
+          <div class="pred-title">2026 핵심 변수</div>
+          <ul class="factors-list" id="pred-factors"></ul>
+
+          <div style="margin-top: 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+            <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;">선거 트렌드 분석</div>
+            <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.7;">
+              서대문구 갑은 2020년 민주당 압승(+28%p) 이후 2024년 접전(+3.75%p)으로 판세가 급격히 좁혀졌습니다.
+              2022년 구청장 선거에서 국민의힘이 당선되는 등 보수 세력이 강화되고 있으나,
+              2024년 탄핵 정국 이후 진보 우세가 회복되는 양상입니다.
+            </div>
+          </div>
+        </div>
+
+        <!-- 동별 예측 막대 (wide) -->
+        <div class="prediction-card wide">
+          <div class="pred-title">행정동별 2026 예측 지지율</div>
+          <div id="dong-pred-bars" class="dong-pred-bars"></div>
+          <div style="margin-top: 14px; display: flex; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary);">
+              <div style="width: 20px; height: 10px; background: linear-gradient(90deg, #1B4FD8, #4472CA); border-radius: 2px;"></div>
+              더불어민주당(진보)
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary);">
+              <div style="width: 20px; height: 10px; background: linear-gradient(90deg, #D4857B, #C0392B); border-radius: 2px;"></div>
+              국민의힘(보수)
+            </div>
+          </div>
+        </div>
+
+        <!-- 레이더 차트 (wide) -->
+        <div class="prediction-card wide">
+          <div class="card-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+            <div>
+              <div class="card-title">동별 예측 레이더 차트</div>
+              <div class="card-subtitle">7개 행정동 진보·보수 예측 지지율 비교</div>
+            </div>
+          </div>
+          <div style="height: 380px; position: relative;">
+            <canvas id="prediction-chart"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 푸터 -->
+  <footer style="text-align: center; padding: 24px 20px; color: var(--text-secondary); font-size: 0.78rem; border-top: 1px solid var(--border-color); margin-top: 40px;">
+    <div>서대문구 갑 선거구 지지도 분석 | 데이터 기준: 제22대 총선 (2024) · 2022년 지방선거 · 2022년 대선</div>
+    <div style="margin-top: 6px; color: #475569;">
+      본 자료는 공개된 선거 데이터를 바탕으로 제작된 분석 자료이며, 실제 선거 결과와 다를 수 있습니다.
+    </div>
+  </footer>
+
+  <!-- 데이터 및 앱 스크립트 -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
